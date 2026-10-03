@@ -162,12 +162,11 @@ def initialize_weights(in_dim, out_dim, scheme='he'):
     # TODO: your approach here
     if scheme == 'he':
       s = np.sqrt(2/in_dim)
-      W = s * np.random.randn(in_dim, out_dim)
-      b = np.zeros(out_dim)
     else:
       s = np.sqrt(2/(in_dim+out_dim))
-      W = s * np.random.randn(in_dim, out_dim)
-      b = np.zeros(out_dim)
+    
+    W = s * np.random.randn(in_dim, out_dim)
+    b = np.zeros(out_dim)
 
     return W, b
 
