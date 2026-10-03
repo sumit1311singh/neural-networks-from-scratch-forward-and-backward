@@ -170,8 +170,59 @@ def initialize_weights(in_dim, out_dim, scheme='he'):
 
     return W, b
 
-# Step 6 - make_loss (not yet solved)
-# TODO: implement
+# Step 6 - make_loss
+import numpy as np
+
+def make_loss(kind='cross_entropy'):
+  """Return a classification loss_fn(logits, labels) -> (loss, d_logits).
+
+  Inputs to loss_fn:
+    logits: (batch, C) float array of raw class scores
+    labels: (batch,) int array of class indices in [0, C)
+  Outputs:
+    loss: Python float, mean scalar loss over the batch (finite)
+    d_logits: (batch, C) gradient of loss w.r.t. logits (finite)
+  Must pass gradient_check, be minimized by confident correct predictions,
+  and stay finite under saturated logits.
+  """
+  # TODO: your approach here
+  if kind != 'cross_entropy':
+    raise ValueError("Only 'cross_entropy' is supported.")
+    
+  def loss_fn(logits, labels):
+    """
+    logits: (batch, C)
+    labels: (batch,) integer class indices
+    Returns:
+      loss: Python float
+      d_logits: (batch, C)
+    """
+
+    # Numerical stability: subtract max per row
+    shifted = logits - np.max(logits, axis=1, keepdims=True)
+
+    # logsumexp
+    logsumexp = np.log(np.sum(np.exp(shifted), axis=1, keepdims=True))
+
+    # correct-class logits
+    batch = logits.shape[0]
+    correct_logits = shifted[np.arange(batch), labels]
+
+    # cross-entropy loss (mean)
+    loss = np.mean(logsumexp.squeeze() - correct_logits)
+
+    # softmax for gradient
+    exp_shifted = np.exp(shifted)
+    softmax = exp_shifted / np.sum(exp_shifted, axis=1, keepdims=True)
+
+    # gradient: (softmax - one_hot) / batch
+    d_logits = softmax
+    d_logits[np.arange(batch), labels] -= 1.0
+    d_logits /= batch
+
+    return float(loss), d_logits
+
+  return loss_fn
 
 # Step 7 - make_sequential (not yet solved)
 # TODO: implement
