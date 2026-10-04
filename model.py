@@ -411,8 +411,81 @@ def train(model, loss_fn, optimizer, x, y, epochs, batch_size, seed=0):
     
     return history
 
-# Step 12 - design_network (not yet solved)
-# TODO: implement
+# Step 12 - design_network
+def design_network(input_dim, num_classes, seed=0):
+    """Design and train a net that solves a nonlinear classification task.
+
+    Inputs:
+      input_dim: int, feature dimension
+      num_classes: int, number of classes
+      seed: int, RNG seed for reproducibility
+
+    Returns:
+      model: trained sequential model (forward/backward/params)
+      metrics: dict with
+        'accuracy': float >= 0.90 on an evaluation set,
+        'x': np.ndarray (N, input_dim) eval features (N >= 50),
+        'y': np.ndarray (N,) integer eval labels.
+      The eval set (x, y) must not be linearly separable to high accuracy
+      (< 0.82 for a linear classifier), and the model's true accuracy on
+      it must match metrics['accuracy'] and be >= 0.90.
+    """
+    # TODO: your approach here
+    rng = np.random.default_rng(seed)
+
+    n = 200
+
+    angles = rng.uniform(0, 2 * np.pi, n)
+
+    r_inner = rng.normal(1.0, 0.1, n // 2)
+    r_outer = rng.normal(2.0, 0.1, n // 2)
+
+    x_inner = np.column_stack([
+        r_inner * np.cos(angles[:n // 2]),
+        r_inner * np.sin(angles[:n // 2])
+    ])
+
+    x_outer = np.column_stack([
+        r_outer * np.cos(angles[n // 2:]),
+        r_outer * np.sin(angles[n // 2:])
+    ])
+
+    x = np.vstack([x_inner, x_outer])
+    if input_dim > 2:
+      extra = np.zeros((n, input_dim - 2))
+      x = np.hstack([x, extra])
+    y = np.concatenate([
+        np.zeros(n // 2, dtype=int),
+        np.ones(n // 2, dtype=int)
+    ])
+
+    init = lambda i, o: initialize_weights(i, o, scheme='he')
+
+    layer_1 = make_dense(input_dim, 8, init)
+    layer_1_act = make_activation(kind='relu')
+    layer_2 = make_dense(8, num_classes, init)
+
+    layers = [layer_1, layer_1_act, layer_2]
+
+    model= make_sequential(layers)
+
+    loss_fn = make_loss(kind='cross_entropy')
+
+    optimizer = make_optimizer(model['params'], lr=1e-2, kind='sgd')
+
+    history = train(model, loss_fn, optimizer, x, y, 200, 16, seed=0)
+
+    logits, _ = model['forward'](x)
+    predictions = np.argmax(logits, axis=1)
+
+    correct_pred = np.sum(predictions == y)
+    accuracy = correct_pred/len(y)
+
+    return model, {
+          'accuracy': accuracy,
+          'x': x,
+          'y': y
+      }
 
 # Step 13 - improve_generalization (not yet solved)
 # TODO: implement
