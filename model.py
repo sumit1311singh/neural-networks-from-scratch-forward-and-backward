@@ -320,54 +320,25 @@ def make_optimizer(params, lr=1e-2, kind='sgd'):
     """
     # TODO: your approach here
     if kind != 'sgd':
-      raise ValueError("Only 'sgd' is supported.")
-      
-    def walk(x):
-        if isinstance(x, np.ndarray):
-            return
-        if isinstance(x, dict):
-            for v in x.values():
-                walk(v)
-            return
-        if isinstance(x, (list, tuple)):
-            for v in x:
-                walk(v)
-            return
-        raise TypeError(
-            "params must contain only numpy arrays, lists/tuples, and dicts"
-        )
-
-    walk(params)
+        raise ValueError("Only 'sgd' is supported.")
 
     def step(grads):
-        def update(p, g):
-            if isinstance(p, np.ndarray):
-                if not isinstance(g, np.ndarray):
-                    raise TypeError("gradient structure does not match params")
-                if p.shape != g.shape:
-                    raise ValueError(
-                        f"gradient shape {g.shape} does not match parameter shape {p.shape}"
-                    )
 
-                # In-place update: the ndarray object itself is preserved.
+        def update(p, g):
+
+            if isinstance(p, np.ndarray):
                 p[...] -= lr * g
                 return
 
             if isinstance(p, dict):
-                if not isinstance(g, dict) or list(p.keys()) != list(g.keys()):
-                    raise ValueError("gradient structure does not match params")
                 for key in p:
                     update(p[key], g[key])
                 return
 
             if isinstance(p, (list, tuple)):
-                if not isinstance(g, type(p)) or len(p) != len(g):
-                    raise ValueError("gradient structure does not match params")
                 for pv, gv in zip(p, g):
                     update(pv, gv)
                 return
-
-            raise TypeError("invalid parameter structure")
 
         update(params, grads)
 
