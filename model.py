@@ -303,8 +303,75 @@ def forward_backward(model, loss_fn, x, y):
 
     return loss, param_grads
 
-# Step 9 - make_optimizer (not yet solved)
-# TODO: implement
+# Step 9 - make_optimizer
+def make_optimizer(params, lr=1e-2, kind='sgd'):
+    """Build an optimizer that updates params in place.
+
+    Inputs:
+      params: arrays, possibly nested in lists/dicts (or dict of arrays) to optimize
+      lr: float learning rate
+      kind: str algorithm name (e.g. 'sgd')
+
+    Returns:
+      dict with key 'step'. step(grads) applies one in-place update
+      using grads structured like params. Parameter shapes must stay
+      unchanged. Repeated steps must reduce a simple convex objective
+      within a modest fixed budget and keep values finite.
+    """
+    # TODO: your approach here
+    if kind != 'sgd':
+      raise ValueError("Only 'sgd' is supported.")
+      
+    def walk(x):
+        if isinstance(x, np.ndarray):
+            return
+        if isinstance(x, dict):
+            for v in x.values():
+                walk(v)
+            return
+        if isinstance(x, (list, tuple)):
+            for v in x:
+                walk(v)
+            return
+        raise TypeError(
+            "params must contain only numpy arrays, lists/tuples, and dicts"
+        )
+
+    walk(params)
+
+    def step(grads):
+        def update(p, g):
+            if isinstance(p, np.ndarray):
+                if not isinstance(g, np.ndarray):
+                    raise TypeError("gradient structure does not match params")
+                if p.shape != g.shape:
+                    raise ValueError(
+                        f"gradient shape {g.shape} does not match parameter shape {p.shape}"
+                    )
+
+                # In-place update: the ndarray object itself is preserved.
+                p[...] -= lr * g
+                return
+
+            if isinstance(p, dict):
+                if not isinstance(g, dict) or list(p.keys()) != list(g.keys()):
+                    raise ValueError("gradient structure does not match params")
+                for key in p:
+                    update(p[key], g[key])
+                return
+
+            if isinstance(p, (list, tuple)):
+                if not isinstance(g, type(p)) or len(p) != len(g):
+                    raise ValueError("gradient structure does not match params")
+                for pv, gv in zip(p, g):
+                    update(pv, gv)
+                return
+
+            raise TypeError("invalid parameter structure")
+
+        update(params, grads)
+
+    return {'step': step}
 
 # Step 10 - train_step (not yet solved)
 # TODO: implement
