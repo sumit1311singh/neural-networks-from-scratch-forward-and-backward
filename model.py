@@ -510,39 +510,61 @@ def improve_generalization(baseline_model_fn, x_train, y_train, x_val, y_val, se
       predictions are non-constant (not a trivial single-class predictor)
     """
     # TODO: your approach here
+
+    print("train:", x_train.shape, y_train.shape)
+    print("val:", x_val.shape, y_val.shape)
+    print("classes:", np.unique(y_train), np.unique(y_val))
+
     baseline_model = baseline_model_fn()
 
     loss_fn = make_loss(kind='cross_entropy')
+
     optimizer = make_optimizer(
         baseline_model['params'],
-        lr=1e-2,
+        lr=0.05,
         kind='sgd'
     )
 
-    baseline_history = train(
+    train(
         baseline_model,
         loss_fn,
         optimizer,
         x_train,
         y_train,
-        epochs=100,
+        epochs=70,
         batch_size=32,
         seed=seed
     )
 
     baseline_logits, _ = baseline_model['forward'](x_val)
-
     baseline_predictions = np.argmax(baseline_logits, axis=1)
 
     baseline_val_accuracy = float(
         np.mean(baseline_predictions == y_val)
     )
 
+    
+    print(
+        "baseline train accuracy:",
+        np.mean(
+            np.argmax(baseline_model['forward'](x_train)[0], axis=1) == y_train
+        )
+    )
+
+    rng = np.random.default_rng(seed)
+
+    noise = rng.normal(0, 0.05, size=x_train.shape)
+    x_aug = np.vstack([x_train, x_train + noise])
+    y_aug = np.concatenate([y_train, y_train])
+
+    best_accuracy = -1.0
+    best_params = None
+
     improved_model = baseline_model_fn()
 
     optimizer = make_optimizer(
         improved_model['params'],
-        lr=1e-3,
+        lr=0.05,
         kind='sgd'
     )
 
@@ -552,10 +574,17 @@ def improve_generalization(baseline_model_fn, x_train, y_train, x_val, y_val, se
         optimizer,
         x_train,
         y_train,
-        epochs=100,
-        batch_size=32,
+        epochs=70,
+        batch_size=1,
         seed=seed
     )
+
+    val_logits, _ = improved_model['forward'](x_val)
+    val_preds = np.argmax(val_logits, axis=1)
+    current_accuracy = np.mean(val_preds == y_val)
+
+    if current_accuracy > best_accuracy:
+        best_accuracy = current_accuracy
 
     logits, _ = improved_model['forward'](x_val)
 
@@ -565,6 +594,7 @@ def improve_generalization(baseline_model_fn, x_train, y_train, x_val, y_val, se
 
     print("baseline:", baseline_val_accuracy)
     print("improved:", val_accuracy)
+    print("unique preds:", np.unique(predictions))
 
     return {
         'val_accuracy': val_accuracy,
